@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ارائه پایان‌نامه</title>
+    <style>
+        :root {
+            /* Space Tech & OLED Dark Mode Colors */
+            --bg-black: #000000;
+            --bg-dark-grey: #121212;
+            --bg-space: #0B0B10;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --accent-blue: #3B82F6;
+            --accent-purple: #7C3AED;
+            --accent-cyan: #00FFFF;
+            --card-bg: rgba(30, 30, 35, 0.85);
+            --card-border: #1E293B;
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Tahoma';
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            :root {
+                --transition-time: 0s !important;
+            }
+            .star {
+                animation: none !important;
+            }
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-black);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Scroll Proxy to create scrollable space */
+        #scroll-proxy {
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        /* Fixed Viewport */
+        #viewport {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            perspective: 1000px;
+            background: radial-gradient(circle at center, var(--bg-dark-grey) 0%, var(--bg-black) 100%);
+            z-index: 1;
+        }
+
+        /* Stars Background */
+        #stars-container {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: twinkle 4s infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.2; transform: scale(0.8); }
+            100% { opacity: 0.8; transform: scale(1.2); }
+        }
+
+        /* Universe Container */
+        #universe {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-style: preserve-3d;
+            transform-origin: 0 0;
+            z-index: 10;
+            /* Will be animated via JS */
+            will-change: transform;
+        }
+
+        /* Celestial Bodies */
+        .celestial-body {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border-radius: 50%;
+            transition: opacity 0.5s ease;
+        }
+
+        .sun {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, var(--accent-blue) 0%, transparent 80%);
+            box-shadow: 0 0 80px rgba(59, 130, 246, 0.6);
+            z-index: 10;
+        }
+
+        .planet {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, var(--accent-purple) 0%, var(--bg-dark-grey) 90%);
+            border: 1px solid var(--accent-purple);
+            box-shadow: 0 0 30px rgba(124, 58, 237, 0.4);
+            z-index: 5;
+            cursor: pointer;
+        }
+
+        .moon {
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, var(--accent-cyan) 0%, var(--bg-dark-grey) 90%);
+            border: 1px solid var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            z-index: 3;
+            cursor: pointer;
+        }
+
+        /* Orbital Lines */
+        .orbit {
+            position: absolute;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Labels and Content */
+        .title-label {
+            position: absolute;
+            top: 110%;
+            width: max-content;
+            font-weight: bold;
+            font-size: 1rem;
+            color: var(--text-primary);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+
+        .sun .title-label {
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+        }
+
+        .content-panel {
+            position: absolute;
+            top: 50%;
+            left: 150%; /* Right side of the body */
+            transform: translateY(-50%);
+            transform-origin: left center;
+            width: 320px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 20px;
+            border-radius: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            backdrop-filter: blur(10px);
+            z-index: 20;
+            text-align: right;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+
+        /* Special positioning for Sun and specific layouts */
+        .sun .content-panel {
+            left: 120%;
+            width: 400px;
+        }
+
+        .moon .content-panel {
+            left: 150%;
+            width: 280px;
+        }
+
+        .content-panel.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(-50%) translateX(-10px);
+            /* Important: scale is handled dynamically in JS to counter zoom */
+        }
+
+        .content-title {
+            color: var(--accent-cyan);
+            margin-top: 0;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+        }
+
+        .content-body {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+
+        /* SVG Charts styling */
+        .chart-container {
+            width: 100%;
+            height: 180px;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chart-node {
+            fill: var(--card-border);
+            stroke: var(--accent-purple);
+            stroke-width: 2;
+        }
+
+        .chart-text {
+            fill: var(--text-primary);
+            font-size: 10px;
+            font-family: var(--font-family);
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .chart-path {
+            stroke: var(--accent-blue);
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrow);
+        }
+
+        /* Navigation Menu */
+        #nav-menu {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 15px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            direction: rtl;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .nav-header {
+            font-weight: bold;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+            font-size: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+
+        .nav-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-cyan);
+            border-right: 3px solid var(--accent-cyan);
+        }
+
+        /* Progress Bar */
+        #progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            z-index: 1000;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        /* Mobile Adjustments */
+        #mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 101;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-family: var(--font-family);
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            #nav-menu {
+                width: calc(100% - 40px);
+                right: 20px;
+                top: 60px;
+                display: none;
+            }
+            .content-panel, .sun .content-panel, .moon .content-panel {
+                left: 50%;
+                top: 120%;
+                transform: translateX(-50%);
+                width: 80vw;
+                transform-origin: top center;
+            }
+            .content-panel.active {
+                transform: translateX(-50%) translateY(0);
+            }
+            #mobile-menu-btn {
+                display: block;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <button id="mobile-menu-btn">☰ فهرست فصول</button>
+    <div id="nav-menu">
+        <div class="nav-header">مسیر ارائه</div>
+        <!-- Menu items populated via JS -->
+    </div>
+
+    <div id="viewport">
+        <div id="stars-container"></div>
+        <div id="universe">
+            <!-- SVG defs for charts -->
+            <svg style="width:0; height:0; position:absolute;" aria-hidden="true" focusable="false">
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-blue)" />
+                </marker>
+              </defs>
+            </svg>
+            <!-- Celestial bodies populated via JS -->
+        </div>
+    </div>
+
+    <!-- The scrollable area -->
+    <div id="scroll-proxy"></div>
+
+    <script>
+        // --------------------------------------------------------
+        // 1. DATA DEFINITION (EDITABLE)
+        // --------------------------------------------------------
+        const RESEARCH_DATA = {
+            meta: {
+                title: "بررسی تأثیر آموزش اثرسازی (Effectuation) بر قصد کارآفرینانه و شناسایی فرصت در دانشجویان، با استفاده از روش‌های PLS-SEM و fsQCA",
+                researcher: "[نام پژوهشگر]",
+                supervisor: "[استاد راهنما]",
+                university: "[نام دانشگاه]",
+                year: "۱۴۰۳",
+                summary: "آموزش اثرسازی، قصد کارآفرینانه و شناسایی فرصت"
+            },
+            chapters: [
+                { id: "c0", index: 0, title: "خورشید پژوهش", type: "sun" },
+                { id: "c1", index: 1, title: "مسئله و اهداف پژوهش", type: "planet" },
+                { id: "c2", index: 2, title: "مبانی نظری و مدل مفهومی", type: "planet" },
+                { id: "c3", index: 3, title: "روش‌شناسی پژوهش", type: "planet" },
+                { id: "c4", index: 4, title: "مدل اندازه‌گیری در PLS-SEM", type: "planet" },
+                { id: "c5", index: 5, title: "مدل ساختاری و آزمون فرضیه‌ها", type: "planet" },
+                { id: "c6", index: 6, title: "تحلیل پیکربندی با fsQCA", type: "planet" },
+                { id: "c7", index: 7, title: "تلفیق یافته‌ها و نتیجه‌گیری", type: "planet" }
+            ],
+            moons: [
+                { chapterId: "c1", id: "c1_m1", title: "زمینه و مسئله اصلی پژوهش", type: "text", content: "در این بخش مسئله اصلی پژوهش و ضرورت انجام آن بیان می‌شود. (داده‌ها وارد نشده است)" },
+                { chapterId: "c1", id: "c1_m2", title: "اهمیت موضوع و شکاف پژوهشی", type: "text", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c1", id: "c1_m3", title: "سؤال اصلی پژوهش", type: "text", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c2", id: "c2_m1", title: "مفهوم آموزش اثرسازی", type: "text", content: "آموزش اثرسازی رویکردی است که بر اساس منابع موجود و خلق فرصت‌ها عمل می‌کند." },
+                { chapterId: "c2", id: "c2_m2", title: "مفهوم قصد کارآفرینانه", type: "text", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c2", id: "c2_m3", title: "مدل مفهومی", type: "model", content: "روابط بین آموزش اثرسازی، قصد کارآفرینانه و شناسایی فرصت." },
+                { chapterId: "c3", id: "c3_m1", title: "رویکرد و طرح پژوهش", type: "text", content: "روش‌های پژوهش و طرح اجرایی. (داده‌ها وارد نشده است)" },
+                { chapterId: "c3", id: "c3_m2", title: "جامعه آماری و نمونه", type: "text", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c4", id: "c4_m1", title: "بارهای عاملی", type: "metrics", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c4", id: "c4_m2", title: "روایی و پایایی", type: "metrics", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c5", id: "c5_m1", title: "ضرایب مسیر", type: "chart", content: "بررسی فرضیات از طریق ضرایب مسیر." },
+                { chapterId: "c5", id: "c5_m2", title: "وضعیت فرضیه‌ها", type: "table", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c6", id: "c6_m1", title: "منطق تحلیل پیکربندی", type: "text", content: "تحلیل شرایط علی پیچیده با استفاده از fsQCA." },
+                { chapterId: "c6", id: "c6_m2", title: "کالیبراسیون داده‌ها", type: "text", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c6", id: "c6_m3", title: "پیکربندی‌ها", type: "configuration", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c7", id: "c7_m1", title: "مهم‌ترین یافته‌های PLS-SEM", type: "text", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c7", id: "c7_m2", title: "مهم‌ترین یافته‌های fsQCA", type: "text", content: "(داده‌ها وارد نشده است)" },
+                { chapterId: "c7", id: "c7_m3", title: "پاسخ به سؤال اصلی", type: "text", content: "جمع‌بندی و نتیجه‌گیری نهایی. (داده‌ها وارد نشده است)" }
+            ]
+        };
+
+        // --------------------------------------------------------
+        // 2. DOM GENERATION & LAYOUT
+        // --------------------------------------------------------
+        const universeEl = document.getElementById('universe');
+        const scrollProxy = document.getElementById('scroll-proxy');
+        const navMenu = document.getElementById('nav-menu');
+
+        // This array will hold each stopping point (scene) for the camera
+        const SCENES = [];
+
+        // Layout Config
+        const ORBIT_RADIUS = 1600;
+        const MOON_ORBIT_RADIUS = 350;
+        const PIXELS_PER_SCENE = 1200; // Scroll distance per scene
+
+        // Generate mock SVG model
+        function generateModelSVG() {
+            return `
+                <div class="chart-container">
+                    <svg width="100%" height="100%" viewBox="0 0 300 150">
+                        <rect x="10" y="55" width="80" height="40" rx="5" class="chart-node" />
+                        <text x="50" y="75" class="chart-text">آموزش اثرسازی</text>
+
+                        <rect x="210" y="20" width="80" height="40" rx="5" class="chart-node" />
+                        <text x="250" y="40" class="chart-text">قصد کارآفرینانه</text>
+
+                        <rect x="210" y="90" width="80" height="40" rx="5" class="chart-node" />
+                        <text x="250" y="110" class="chart-text">شناسایی فرصت</text>
+
+                        <path d="M 90 75 L 205 40" class="chart-path" />
+                        <path d="M 90 75 L 205 110" class="chart-path" />
+                    </svg>
+                </div>
+            `;
+        }
+
+        function generateChartSVG() {
+            return `
+                <div class="chart-container">
+                    <svg width="100%" height="100%" viewBox="0 0 200 150">
+                        <rect x="20" y="20" width="30" height="110" fill="var(--accent-blue)" />
+                        <rect x="85" y="50" width="30" height="80" fill="var(--accent-purple)" />
+                        <rect x="150" y="80" width="30" height="50" fill="var(--accent-cyan)" />
+                        <line x1="10" y1="130" x2="190" y2="130" stroke="var(--text-secondary)" stroke-width="2" />
+                    </svg>
+                </div>
+            `;
+        }
+
+        function buildUniverse() {
+            // SUN (Center)
+            const sunData = RESEARCH_DATA.chapters[0];
+            const sun = document.createElement('div');
+            sun.className = 'celestial-body sun';
+            sun.id = sunData.id;
+            sun.style.left = '0px';
+            sun.style.top = '0px';
+
+            const sunLabel = document.createElement('div');
+            sunLabel.className = 'title-label';
+            sunLabel.innerText = RESEARCH_DATA.meta.summary;
+            sun.appendChild(sunLabel);
+
+            const sunPanel = document.createElement('div');
+            sunPanel.className = 'content-panel';
+            sunPanel.innerHTML = `
+                <h3 class="content-title">${RESEARCH_DATA.meta.title}</h3>
+                <div class="content-body">
+                    <p><strong>پژوهشگر:</strong> ${RESEARCH_DATA.meta.researcher}</p>
+                    <p><strong>استاد راهنما:</strong> ${RESEARCH_DATA.meta.supervisor}</p>
+                    <p><strong>دانشگاه:</strong> ${RESEARCH_DATA.meta.university} - ${RESEARCH_DATA.meta.year}</p>
+                </div>
+            `;
+            sun.appendChild(sunPanel);
+            universeEl.appendChild(sun);
+
+            SCENES.push({ type: 'sun', el: sun, x: 0, y: 0, scale: 1, id: sunData.id });
+            addNavItem(sunData.title, sunData.id);
+
+            // PLANETS
+            const planetChapters = RESEARCH_DATA.chapters.filter(c => c.type === 'planet');
+            const angleStep = (2 * Math.PI) / planetChapters.length;
+
+            // Draw main orbit line
+            const mainOrbit = document.createElement('div');
+            mainOrbit.className = 'orbit';
+            mainOrbit.style.width = `${ORBIT_RADIUS * 2}px`;
+            mainOrbit.style.height = `${ORBIT_RADIUS * 2}px`;
+            mainOrbit.style.left = '0px';
+            mainOrbit.style.top = '0px';
+            universeEl.appendChild(mainOrbit);
+
+            planetChapters.forEach((chapter, i) => {
+                const angle = i * angleStep;
+                // Offset angle slightly so the first planet isn't directly right
+                const rotatedAngle = angle - (Math.PI / 2);
+                const px = Math.cos(rotatedAngle) * ORBIT_RADIUS;
+                const py = Math.sin(rotatedAngle) * ORBIT_RADIUS;
+
+                const planet = document.createElement('div');
+                planet.className = 'celestial-body planet';
+                planet.id = chapter.id;
+                planet.style.left = `${px}px`;
+                planet.style.top = `${py}px`;
+
+                const label = document.createElement('div');
+                label.className = 'title-label';
+                label.innerText = `فصل ${chapter.index}: ${chapter.title}`;
+                planet.appendChild(label);
+
+                const pPanel = document.createElement('div');
+                pPanel.className = 'content-panel';
+                pPanel.innerHTML = `
+                    <h3 class="content-title">فصل ${chapter.index}: ${chapter.title}</h3>
+                    <div class="content-body"><p>برای مشاهده جزئیات اسکرول کنید.</p></div>
+                `;
+                planet.appendChild(pPanel);
+
+                universeEl.appendChild(planet);
+
+                SCENES.push({ type: 'planet', el: planet, x: px, y: py, scale: 2.5, id: chapter.id });
+                addNavItem(`فصل ${chapter.index}: ${chapter.title}`, chapter.id);
+
+                // MOONS for this planet
+                const moons = RESEARCH_DATA.moons.filter(m => m.chapterId === chapter.id);
+                if(moons.length > 0) {
+                    const moonOrbit = document.createElement('div');
+                    moonOrbit.className = 'orbit';
+                    moonOrbit.style.width = `${MOON_ORBIT_RADIUS * 2}px`;
+                    moonOrbit.style.height = `${MOON_ORBIT_RADIUS * 2}px`;
+                    moonOrbit.style.left = `${px}px`;
+                    moonOrbit.style.top = `${py}px`;
+                    universeEl.appendChild(moonOrbit);
+                }
+
+                const moonAngleStep = (2 * Math.PI) / (moons.length > 0 ? moons.length : 1);
+
+                moons.forEach((moon, j) => {
+                    const mAngle = j * moonAngleStep;
+                    const mx = px + Math.cos(mAngle) * MOON_ORBIT_RADIUS;
+                    const my = py + Math.sin(mAngle) * MOON_ORBIT_RADIUS;
+
+                    const moonEl = document.createElement('div');
+                    moonEl.className = 'celestial-body moon';
+                    moonEl.id = moon.id;
+                    moonEl.style.left = `${mx}px`;
+                    moonEl.style.top = `${my}px`;
+
+                    const mLabel = document.createElement('div');
+                    mLabel.className = 'title-label';
+                    mLabel.style.fontSize = '0.85rem';
+                    mLabel.innerText = moon.title;
+                    moonEl.appendChild(mLabel);
+
+                    const mPanel = document.createElement('div');
+                    mPanel.className = 'content-panel';
+
+                    let contentHtml = `<p>${moon.content}</p>`;
+                    if (moon.type === 'model') contentHtml += generateModelSVG();
+                    else if (moon.type === 'chart') contentHtml += generateChartSVG();
+                    else if (moon.type === 'table' || moon.type === 'metrics' || moon.type === 'configuration') {
+                        contentHtml += `<div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.05); border-radius:5px; text-align:center; font-size:0.8rem; color:var(--text-secondary);">[جایگاه داده‌های ${moon.type}]</div>`;
+                    }
+
+                    mPanel.innerHTML = `
+                        <h4 class="content-title">${moon.title}</h4>
+                        <div class="content-body">${contentHtml}</div>
+                    `;
+                    moonEl.appendChild(mPanel);
+
+                    universeEl.appendChild(moonEl);
+
+                    SCENES.push({ type: 'moon', el: moonEl, x: mx, y: my, scale: 5, id: moon.id, parentId: chapter.id });
+                });
+
+                // Add an intermediate scene to pull back to planet before going to next planet
+                if (moons.length > 0) {
+                    SCENES.push({ type: 'planet-exit', el: planet, x: px, y: py, scale: 2.5, id: chapter.id + "_exit", parentId: chapter.id });
+                }
+            });
+
+            // Add a final scene back to sun
+            SCENES.push({ type: 'sun-final', el: sun, x: 0, y: 0, scale: 1, id: 'c0_final' });
+
+            // Set total scroll height
+            scrollProxy.style.height = `${(SCENES.length - 1) * PIXELS_PER_SCENE + window.innerHeight}px`;
+        }
+
+        function addNavItem(title, id) {
+            const navItem = document.createElement('div');
+            navItem.className = 'nav-item';
+            navItem.innerText = title;
+            navItem.dataset.id = id;
+            navItem.onclick = () => {
+                const sceneIndex = SCENES.findIndex(s => s.id === id);
+                if (sceneIndex >= 0) {
+                    window.scrollTo({
+                        top: sceneIndex * PIXELS_PER_SCENE,
+                        behavior: 'smooth'
+                    });
+                    if (window.innerWidth <= 768) {
+                        navMenu.style.display = 'none';
+                    }
+                }
+            };
+            navMenu.appendChild(navItem);
+        }
+
+        // --------------------------------------------------------
+        // 3. BACKGROUND STARS
+        // --------------------------------------------------------
+        function createStars() {
+            const container = document.getElementById('stars-container');
+            const count = window.innerWidth < 768 ? 50 : 150;
+            for (let i = 0; i < count; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.animationDelay = `${Math.random() * 4}s`;
+                container.appendChild(star);
+            }
+        }
+
+        // --------------------------------------------------------
+        // 4. ANIMATION & SCROLL LOGIC
+        // --------------------------------------------------------
+        const progressBar = document.getElementById('progress-bar');
+        let currentSceneIndex = -1;
+
+        // Easing function for smoother transitions
+        function easeInOutQuad(t) {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        }
+
+        function updateScene() {
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
+            const maxScroll = scrollProxy.scrollHeight - window.innerHeight;
+
+            // Update Progress bar
+            const progress = maxScroll > 0 ? Math.min(1, Math.max(0, scrollY / maxScroll)) : 0;
+            progressBar.style.width = `${progress * 100}%`;
+
+            // Calculate current exact position in scenes
+            let rawIndex = scrollY / PIXELS_PER_SCENE;
+            if (rawIndex < 0) rawIndex = 0;
+            if (rawIndex >= SCENES.length - 1) rawIndex = SCENES.length - 1.001;
+
+            const currentIndex = Math.floor(rawIndex);
+            const nextIndex = Math.min(currentIndex + 1, SCENES.length - 1);
+            let sceneProgress = rawIndex - currentIndex;
+
+            // Apply easing to movement progress
+            const t = easeInOutQuad(sceneProgress);
+
+            const scene1 = SCENES[currentIndex];
+            const scene2 = SCENES[nextIndex];
+
+            // Interpolate Transform (x, y, scale)
+            const x = scene1.x + (scene2.x - scene1.x) * t;
+            const y = scene1.y + (scene2.y - scene1.y) * t;
+            const scale = scene1.scale + (scene2.scale - scene1.scale) * t;
+
+            universeEl.style.transform = `scale(${scale}) translate(${-x}px, ${-y}px)`;
+
+            // Active state logic (threshold at 0.5 to switch active panels)
+            const activeIndex = sceneProgress < 0.5 ? currentIndex : nextIndex;
+
+            // Adjust panel scale inversely so it remains a fixed size despite universe zoom
+            document.querySelectorAll('.content-panel').forEach(p => {
+                 // only apply inverse scale to active panels (done below when adding the class)
+                 // or just remove the active class first
+                 p.classList.remove('active');
+                 p.style.transform = `translateY(-50%) translateX(-10px) scale(${1/scale})`;
+            });
+
+            // Handle Mobile specifically for inverse scale transform
+            const isMobile = window.innerWidth <= 768;
+
+            if (activeIndex !== currentSceneIndex) {
+                currentSceneIndex = activeIndex;
+            }
+
+            const activeScene = SCENES[activeIndex];
+
+            // 2. Show active panel if applicable
+            if (activeScene.el && !activeScene.type.includes('exit') && !activeScene.type.includes('final')) {
+                const activePanel = activeScene.el.querySelector('.content-panel');
+                if (activePanel) {
+                    activePanel.classList.add('active');
+                    activePanel.style.transform = isMobile ? `translateX(-50%) translateY(0) scale(${1/scale})` : `translateY(-50%) translateX(-10px) scale(${1/scale})`;
+                }
+            } else if (activeScene.type === 'sun-final') {
+                const sunPanel = SCENES[0].el.querySelector('.content-panel');
+                if (sunPanel) {
+                    sunPanel.classList.add('active');
+                    sunPanel.style.transform = isMobile ? `translateX(-50%) translateY(0) scale(${1/scale})` : `translateY(-50%) translateX(-10px) scale(${1/scale})`;
+                }
+            }
+
+                // 3. Highlight Nav Menu
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+                let highlightId = activeScene.id;
+                if (activeScene.type === 'moon' || activeScene.type === 'planet-exit') {
+                    highlightId = activeScene.parentId;
+                } else if (activeScene.type === 'sun-final') {
+                    highlightId = 'c0';
+                }
+
+                const navItem = document.querySelector(`.nav-item[data-id="${highlightId}"]`);
+                if (navItem) navItem.classList.add('active');
+            }
+        }
+
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    updateScene();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        // Mobile Menu Toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            if (navMenu.style.display === 'block') {
+                navMenu.style.display = 'none';
+            } else {
+                navMenu.style.display = 'block';
+            }
+        });
+
+        // Initialize
+        createStars();
+        buildUniverse();
+        updateScene(); // Initial setup based on current scroll position
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            // Re-calc max scroll
+            scrollProxy.style.height = `${(SCENES.length - 1) * PIXELS_PER_SCENE + window.innerHeight}px`;
+            updateScene();
+        });
+
+    </script>
+</body>
+</html>
